@@ -11,7 +11,7 @@ class HipChat extends Adapter
 
   reply: (user, strings...) ->
     for str in strings
-      @send user, "@#{user.name.replace(' ', '')} #{str}"
+      @send user, "@#{user.mention_name} #{str}"
 
   run: ->
     self = @
@@ -34,7 +34,7 @@ class HipChat extends Adapter
     console.log "Wobot object:", bot
 
     bot.onConnect =>
-      console.log "Connected to HipChat as @#{bot.mention_name}!"
+      console.log "Connected to HipChat as #{self.mentionName(bot)}!"
 
       # Provide our name to Hubot
       self.robot.name = bot.mention_name
@@ -60,7 +60,7 @@ class HipChat extends Adapter
       bot.getRoster (err, users, stanza) ->
         if users
           for user in users
-            self.userForId self.userIdFromJid(user.jid), user
+            self.userForId(self.mentionName(user), user)
         else
           console.log "Can't list users: #{err}"
 
@@ -86,7 +86,8 @@ class HipChat extends Adapter
       self.receive new TextMessage(author, hubot_msg)
 
     bot.onPrivateMessage (from, message) ->
-      author = self.userForId(self.userIdFromJid(from))
+      # lookup user by jid
+      author = user for mention_name, user of self.robot.users() when user.jid == from
       author.reply_to = from
 
       # remove leading @mention name if present and format the message like
@@ -105,6 +106,9 @@ class HipChat extends Adapter
     bot.connect()
 
     @bot = bot
+
+  mentionName: (user) ->
+    "@" + user.mention_name
 
   userIdFromJid: (jid) ->
     try
